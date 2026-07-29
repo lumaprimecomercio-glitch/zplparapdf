@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZPL para PDF - Conversor de Etiquetas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1e429f;
+            --primary-light: #e1effe;
+            --secondary: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--gray-600);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 60px 24px 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Main container */
+        .main-container {
+            max-width: 900px;
+            margin: -40px auto 0;
+            padding: 0 24px 60px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .converter-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .card-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px;
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--gray-500);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            background: var(--primary-light);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--gray-700);
+            background: var(--gray-50);
+        }
+
+        .card-body {
+            padding: 32px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: var(--gray-50);
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            transform: scale(1.01);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .upload-area h3 {
+            font-size: 1.1rem;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .upload-area p {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+
+        .file-types {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .file-type {
+            background: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--gray-600);
+            border: 1px solid var(--gray-200);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Text area */
+        .zpl-textarea {
+            width: 100%;
+            min-height: 280px;
+            padding: 16px;
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .zpl-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+
+        .zpl-hint {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: var(--gray-500);
+        }
+
+        .zpl-hint code {
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        /* Options */
+        .options-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .options-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .option-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--gray-600);
+        }
+
+        .option-group select,
+        .option-group input {
+            padding: 10px 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            background: white;
+            color: var(--gray-800);
+        }
+
+        .option-group select:focus,
+        .option-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Convert button */
+        .convert-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .convert-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .convert-btn .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .convert-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        .convert-btn.loading .btn-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results */
+        .results-section {
+            margin-top: 32px;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .results-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .results-count {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .preview-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+
+        .preview-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: white;
+            border-bottom: 1px solid var(--gray-100);
+            padding: 8px;
+        }
+
+        .preview-info {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .preview-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .preview-status {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .preview-status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .preview-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Download button */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin-top: 20px;
+        }
+
+        .download-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-top: 1px solid var(--gray-200);
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+
+        /* File list */
+        .file-list {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .file-list.active {
+            display: block;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .file-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-item-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .file-item-size {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        .file-item-remove {
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .file-item-remove:hover {
+            color: var(--danger);
+        }
+
+        /* Alert */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .alert.active {
+            display: flex;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .card-body {
+                padding: 20px;
+            }
+
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <div class="logo">
+                <div class="logo-icon">📋</div>
+                <span>ZPL para PDF</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" onclick="showTab('upload')">Conversor</a></li>
+                <li><a href="#how">Como Funciona</a></li>
+                <li><a href="#faq">FAQ</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero">
+        <h1>Conversor ZPL para PDF</h1>
+        <p>Transforme código ZPL em documentos PDF prontos para impressão. Suporte a arquivos .zpl, .txt e .zip</p>
+        <div class="hero-badges">
+            <span class="badge">⚡ Rápido</span>
+            <span class="badge">🔒 Privado</span>
+            <span class="badge">📱 Gratuito</span>
+        </div>
+    </div>
+
+    <!-- Main Converter -->
+    <div class="main-container">
+        <div class="converter-card">
+            <div class="card-tabs">
+                <button class="tab-btn active" onclick="showTab('upload')">
+                    <span>📁</span> Upload
+                </button>
+                <button class="tab-btn" onclick="showTab('paste')">
+                    <span>✏️</span> Colar Texto
+                </button>
+            </div>
+
+            <div class="card-body">
+                <div id="alert" class="alert"></div>
+
+                <!-- Upload Tab -->
+                <div id="tab-upload" class="tab-content active">
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">📤</div>
+                        <h3>Arraste e solte ou clique para selecionar</h3>
+                        <p>Arquivos .zpl, .txt ou .zip com etiquetas</p>
+                        <div class="file-types">
+                            <span class="file-type">.zpl</span>
+                            <span class="file-type">.txt</span>
+                            <span class="file-type">.zip</span>
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".zpl,.txt,.zip" onchange="handleFileSelect(event)">
+
+                    <div id="fileList" class="file-list"></div>
+                </div>
+
+                <!-- Paste Tab -->
+                <div id="tab-paste" class="tab-content">
+                    <textarea id="zplText" class="zpl-textarea" placeholder="Cole aqui o código ZPL da sua etiqueta...
+
+Exemplo:
+^XA
+^FO50,50^A0N,50,50^FDEXEMPLO^FS
+^FO50,120^BY3^BCN,100,Y,N,N^FD123456789^FS
+^XZ"></textarea>
+                    <div class="zpl-hint">
+                        <span>O código deve começar com <code>^XA</code> e terminar com <code>^XZ</code></span>
+                        <span id="charCount">0 caracteres</span>
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="options-section">
+                    <div class="options-title">
+                        <span>⚙️</span> Configurações da Etiqueta
+                    </div>
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label>Largura (cm)</label>
+                            <input type="number" id="labelWidth" value="11" min="1" max="30" step="0.1">
+                        </div>
+                        <div class="option-group">
+                            <label>Altura (cm)</label>
+                            <input type="number" id="labelHeight" value="15" min="1" max="30" step="0.1">
+                        </div>
+                        <div class="option-group">
+                            <label>Densidade (dpi)</label>
+                            <select id="labelDensity">
+                                <option value="8">8 dpmm (203 dpi)</option>
+                                <option value="12">12 dpmm (300 dpi)</option>
+                                <option value="24">24 dpmm (600 dpi)</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>Tamanho Preset</label>
+                            <select id="labelPreset" onchange="applyPreset()">
+                                <option value="custom">Personalizado</option>
+                                <option value="11x15">Padrão (11 x 15 cm)</option>
+                                <option value="10x15">Envio (10 x 15 cm)</option>
+                                <option value="6x4">FBA (6 x 4 pol)</option>
+                                <option value="4x6">Mercado Livre (4 x 6 pol)</option>
+                                <option value="10x10">Quadrado (10 x 10 cm)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="convert-btn" id="convertBtn" onclick="convertAll()">
+                    <span class="spinner"></span>
+                    <span class="btn-text">🔄 Converter para PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="results-section">
+            <div class="results-header">
+                <div class="results-title">📄 Pré-visualização</div>
+                <div class="results-count" id="resultsCount">0 etiquetas</div>
+            </div>
+            <div id="previewGrid" class="preview-grid"></div>
+            <div class="download-section">
+                <button class="download-btn" onclick="downloadAllPDF()">
+                    <span>⬇️</span> Baixar PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- How it Works -->
+        <div id="how" style="margin-top: 60px; padding: 0 0 40px;">
+            <h2 style="text-align: center; font-size: 1.8rem; margin-bottom: 40px; color: var(--gray-800);">Como Converter</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
+                <div style="background: white; padding: 32px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="font-size: 2.5rem; margin-bottom: 16px;">1️⃣</div>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 8px; color: var(--gray-800);">Selecione</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">Faça upload do arquivo .zpl, .txt ou .zip, ou cole o código diretamente</p>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="font-size: 2.5rem; margin-bottom: 16px;">2️⃣</div>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 8px; color: var(--gray-800);">Converta</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">Clique em converter e aguarde o processamento das etiquetas</p>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="font-size: 2.5rem; margin-bottom: 16px;">3️⃣</div>
+                    <h3 style="font-size: 1.1rem; margin-bottom: 8px; color: var(--gray-800);">Baixe</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">Visualize a prévia e faça o download do PDF gerado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div id="faq" style="margin-top: 40px; padding: 0 0 40px;">
+            <h2 style="text-align: center; font-size: 1.8rem; margin-bottom: 40px; color: var(--gray-800);">Perguntas Frequentes</h2>
+            <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden;">
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--gray-100);">
+                    <h3 style="font-size: 1rem; color: var(--gray-800); margin-bottom: 6px;">O que é código ZPL?</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">ZPL (Zebra Programming Language) é a linguagem desenvolvida pela Zebra Technologies para criar etiquetas em impressoras térmicas. O código começa com ^XA e termina com ^XZ.</p>
+                </div>
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--gray-100);">
+                    <h3 style="font-size: 1rem; color: var(--gray-800); margin-bottom: 6px;">Posso converter múltiplas etiquetas?</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">Sim! Você pode enviar um arquivo ZIP com vários arquivos ZPL ou separar múltiplos códigos com quebras de linha no modo texto.</p>
+                </div>
+                <div style="padding: 20px 24px;">
+                    <h3 style="font-size: 1rem; color: var(--gray-800); margin-bottom: 6px;">Os dados são enviados para algum servidor?</h3>
+                    <p style="color: var(--gray-500); font-size: 0.9rem;">Não. Este conversor funciona 100% no seu navegador. Seus dados ZPL não saem do seu computador. Utilizamos a API Labelary pública apenas para renderização.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p> ZPL para PDF - Sistema Privado para Uso Próprio</p>
+        <p style="margin-top: 8px; font-size: 0.8rem;">Conversão local via navegador · Sem dados enviados para servidores</p>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        let selectedFiles = [];
+        let convertedImages = [];
+        let currentTab = 'upload';
+
+        // Tab switching
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.closest('.tab-btn').classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        // Character count
+        document.getElementById('zplText').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length + ' caracteres';
+        });
+
+        // File handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFileSelect(event) {
+            handleFiles(event.target.files);
+        }
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files).filter(f => {
+                const ext = f.name.toLowerCase().split('.').pop();
+                return ['zpl', 'txt', 'zip'].includes(ext);
+            });
+            updateFileList();
+        }
+
+        function updateFileList() {
+            const list = document.getElementById('fileList');
+            if (selectedFiles.length === 0) {
+                list.classList.remove('active');
+                return;
+            }
+            list.classList.add('active');
+            list.innerHTML = selectedFiles.map((f, i) => `
+                <div class="file-item">
+                    <div class="file-item-info">
+                        <span>📄</span>
+                        <div>
+                            <div class="file-item-name">${f.name}</div>
+                            <div class="file-item-size">${(f.size/1024).toFixed(1)} KB</div>
+                        </div>
+                    </div>
+                    <button class="file-item-remove" onclick="removeFile(${i})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        // Presets
+        function applyPreset() {
+            const preset = document.getElementById('labelPreset').value;
+            const presets = {
+                '11x15': { w: 11, h: 15 },
+                '10x15': { w: 10, h: 15 },
+                '6x4': { w: 15.24, h: 10.16 },
+                '4x6': { w: 10.16, h: 15.24 },
+                '10x10': { w: 10, h: 10 }
+            };
+            if (presets[preset]) {
+                document.getElementById('labelWidth').value = presets[preset].w;
+                document.getElementById('labelHeight').value = presets[preset].h;
+            }
+        }
+
+        // Alert
+        function showAlert(msg, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = type === 'error' ? '❌ ' + msg : '✅ ' + msg;
+            alert.className = 'alert ' + type + ' active';
+            setTimeout(() => alert.classList.remove('active'), 5000);
+        }
+
+        // Validate ZPL
+        function validateZPL(code) {
+            code = code.trim();
+            if (!code.includes('^XA')) return 'Código ZPL deve começar com ^XA';
+            if (!code.includes('^XZ')) return 'Código ZPL deve terminar com ^XZ';
+            return null;
+        }
+
+        // Convert ZPL to image using Labelary API
+        async function convertZPLToImage(zplCode, width, height, density) {
+            const wInches = (width / 2.54).toFixed(2);
+            const hInches = (height / 2.54).toFixed(2);
+            const url = `http://api.labelary.com/v1/printers/${density}dpmm/labels/${wInches}x${hInches}/0/`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: zplCode
+            });
+
+            if (!response.ok) throw new Error('Erro na conversão: ' + response.statusText);
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        }
+
+        // Extract ZPL files from ZIP
+        async function extractZPLFromZip(file) {
+            const zip = await JSZip.loadAsync(file);
+            const zplFiles = [];
+            for (const [filename, zipEntry] of Object.entries(zip.files)) {
+                if (zipEntry.dir) continue;
+                const ext = filename.toLowerCase().split('.').pop();
+                if (['zpl', 'txt'].includes(ext)) {
+                    const content = await zipEntry.async('text');
+                    zplFiles.push({ name: filename, content: content });
+                }
+            }
+            return zplFiles;
+        }
+
+        // Main conversion
+        async function convertAll() {
+            const btn = document.getElementById('convertBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            convertedImages = [];
+            const width = parseFloat(document.getElementById('labelWidth').value);
+            const height = parseFloat(document.getElementById('labelHeight').value);
+            const density = document.getElementById('labelDensity').value;
+            const results = document.getElementById('results');
+            const previewGrid = document.getElementById('previewGrid');
+
+            previewGrid.innerHTML = '';
+            results.classList.remove('active');
+
+            try {
+                let zplItems = [];
+
+                if (currentTab === 'upload') {
+                    if (selectedFiles.length === 0) {
+                        showAlert('Selecione pelo menos um arquivo', 'error');
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    for (const file of selectedFiles) {
+                        const ext = file.name.toLowerCase().split('.').pop();
+                        if (ext === 'zip') {
+                            const zipFiles = await extractZPLFromZip(file);
+                            zplItems.push(...zipFiles);
+                        } else {
+                            const content = await file.text();
+                            zplItems.push({ name: file.name, content: content });
+                        }
+                    }
+                } else {
+                    const text = document.getElementById('zplText').value.trim();
+                    if (!text) {
+                        showAlert('Cole o código ZPL para converter', 'error');
+                        btn.classList.remove('loading');
+                        btn.disabled = false;
+                        return;
+                    }
+                    // Split multiple ZPL codes
+                    const codes = text.split(/\^XZ\s*\n\s*\^XA/).map((c, i, arr) => {
+                        if (i === 0) return c + (arr.length > 1 ? '^XZ' : '');
+                        if (i === arr.length - 1) return '^XA' + c;
+                        return '^XA' + c + '^XZ';
+                    });
+                    zplItems = codes.map((c, i) => ({ name: 'Etiqueta ' + (i + 1), content: c }));
+                }
+
+                // Validate and convert each
+                for (const item of zplItems) {
+                    const validation = validateZPL(item.content);
+                    if (validation) {
+                        previewGrid.innerHTML += `
+                            <div class="preview-card">
+                                <div class="preview-info" style="height: 200px; justify-content: center; flex-direction: column; gap: 8px;">
+                                    <span style="font-size: 2rem;">⚠️</span>
+                                    <span class="preview-status error">${validation}</span>
+                                </div>
+                                <div class="preview-info">
+                                    <span class="preview-name">${item.name}</span>
+                                    <span class="preview-status error">Erro</span>
+                                </div>
+                            </div>
+                        `;
+                        continue;
+                    }
+
+                    try {
+                        const imageUrl = await convertZPLToImage(item.content, width, height, density);
+                        convertedImages.push({ name: item.name, url: imageUrl });
+
+                        previewGrid.innerHTML += `
+                            <div class="preview-card">
+                                <img src="${imageUrl}" class="preview-image" alt="${item.name}">
+                                <div class="preview-info">
+                                    <span class="preview-name">${item.name}</span>
+                                    <span class="preview-status success">OK</span>
+                                </div>
+                            </div>
+                        `;
+                    } catch (e) {
+                        previewGrid.innerHTML += `
+                            <div class="preview-card">
+                                <div class="preview-info" style="height: 200px; justify-content: center; flex-direction: column; gap: 8px;">
+                                    <span style="font-size: 2rem;">❌</span>
+                                    <span class="preview-status error">${e.message}</span>
+                                </div>
+                                <div class="preview-info">
+                                    <span class="preview-name">${item.name}</span>
+                                    <span class="preview-status error">Falhou</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                document.getElementById('resultsCount').textContent =
+                    convertedImages.length + ' etiqueta' + (convertedImages.length !== 1 ? 's' : '') + ' convertida' + (convertedImages.length !== 1 ? 's' : '');
+                results.classList.add('active');
+
+                if (convertedImages.length > 0) {
+                    showAlert('Conversão concluída com sucesso!', 'success');
+                    // Auto-scroll to results
+                    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    showAlert('Nenhuma etiqueta pôde ser convertida', 'error');
+                }
+
+            } catch (e) {
+                showAlert('Erro: ' + e.message, 'error');
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        // Download PDF
+        async function downloadAllPDF() {
+            if (convertedImages.length === 0) return;
+
+            const btn = document.querySelector('.download-btn');
+            btn.style.opacity = '0.6';
+            btn.disabled = true;
+
+            try {
+                const width = parseFloat(document.getElementById('labelWidth').value);
+                const height = parseFloat(document.getElementById('labelHeight').value);
+                const pdf = new jsPDF({
+                    orientation: width > height ? 'l' : 'p',
+                    unit: 'cm',
+                    format: [width, height]
+                });
+
+                for (let i = 0; i < convertedImages.length; i++) {
+                    if (i > 0) pdf.addPage([width, height], width > height ? 'l' : 'p');
+
+                    const img = new Image();
+                    img.src = convertedImages[i].url;
+                    await new Promise(r => {
+                        img.onload = r;
+                        img.onerror = r;
+                    });
+
+                    pdf.addImage(img.src, 'PNG', 0, 0, width, height);
+                }
+
+                pdf.save('etiquetas-zpl.pdf');
+                showAlert('PDF baixado com sucesso!', 'success');
+            } catch (e) {
+                showAlert('Erro ao gerar PDF: ' + e.message, 'error');
+            } finally {
+                btn.style.opacity = '1';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
