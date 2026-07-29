@@ -930,7 +930,7 @@ Exemplo:
         async function convertZPLToImage(zplCode, width, height, density) {
             const wInches = (width / 2.54).toFixed(2);
             const hInches = (height / 2.54).toFixed(2);
-            const url = `http://api.labelary.com/v1/printers/${density}dpmm/labels/${wInches}x${hInches}/0/`;
+            const url = `https://api.labelary.com/v1/printers/${density}dpmm/labels/${wInches}x${hInches}/0/`;
 
             const response = await fetch(url, {
                 method: 'POST',
